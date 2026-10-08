@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Princess Vanity — เจ้าหญิงเรียงลิปสติก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Playfair+Display:wght@600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     THEME — "ราตรีงานเต้นรำของเจ้าหญิง": ม่วงกุหลาบ, ชมพูพาสเทล,
+     ฟ้าแก้วใส, ทองแชมเปญ. โค้งมนนุ่มนวล เหมือนห้องบอลรูมยามค่ำ
+     ลิปสติกเรียงรายบนโต๊ะเครื่องแป้งใต้แสงโคมระย้า
+     ============================================================ */
+  :root {
+    --stone-0:   #2a1a3e;   /* เงาราตรีลึกสุด */
+    --stone-1:   #3a2456;   /* ผ้ากำมะหยี่ม่วง */
+    --stone-2:   #4a2f6b;   /* แผงยกนูน */
+    --stone-3:   #5c3d82;   /* สว่าง / hover */
+    --stone-edge:#8a6ab5;   /* ขอบเงินม่วง */
+    --rune:      #ffc7e6;   /* ชมพูกลีบกุหลาบ */
+    --rune-dim:  #c79bd8;   /* ม่วงอ่อนหม่น (ตัวรอง) */
+    --amber:     #f6d365;   /* ทองแชมเปญ */
+    --amber-dim: #c7a94a;
+    --candle:    #ffe9a8;   /* แสงเทียนทอง */
+    --text:      #fdf2ff;   /* ตัวอักษรหลัก สีงาช้างอมชมพู */
+    --muted:     #d6b8e8;
+    --good:      #9ff0d6;   /* มนตร์นางฟ้า เขียวมิ้นต์ */
+    --bad:       #ff8fab;   /* เที่ยงคืน/คำเตือน ชมพูเข้ม */
+    /* ลิปสติกบนโต๊ะเครื่องแป้ง (คง "ชื่อ" เดิมที่ JS เรียกใช้ ไม่แก้ logic) */
+    --bar:         #b79ad6;   /* แก้วดิบ ม่วงลาเวนเดอร์ */
+    --bar-active:  var(--amber);
+    --bar-sorted:  #76e0c2;   /* เข้าที่ = เรืองมิ้นต์ */
+    --bar-compare: var(--rune);/* กำลังเทียบ = ชมพูเรือง */
+    --bar-pivot:   var(--bad); /* คู่หลัก (pivot) = ชมพูเข้ม */
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    color: var(--text);
+    font-family: 'Sarabun', 'Cormorant Garamond', "Palatino Linotype", Georgia, serif;
+    min-height: 100vh;
+    /* ห้องบอลรูมยามราตรี: ไล่เฉดม่วงกุหลาบ + แสงโคมระย้าจากด้านบน */
+    background:
+      radial-gradient(1000px 560px at 50% -10%, rgba(255,199,230,.22), transparent 62%),
+      radial-gradient(680px 440px at 84% 8%, rgba(246,211,101,.14), transparent 58%),
+      radial-gradient(620px 420px at 12% 20%, rgba(150,210,255,.12), transparent 60%),
+      linear-gradient(180deg, #4a2d6e 0%, #38204f 50%, #26163a 100%);
+    background-attachment: fixed;
+  }
+  /* ประกายดาวระยิบ ๆ ทั่วห้อง เหมือนฝุ่นเวทนางฟ้า */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .9;
+    background-image:
+      radial-gradient(2px 2px at 12% 18%, rgba(255,255,255,.9), transparent),
+      radial-gradient(1.5px 1.5px at 28% 62%, rgba(255,233,168,.8), transparent),
+      radial-gradient(2px 2px at 48% 30%, rgba(255,199,230,.85), transparent),
+      radial-gradient(1.5px 1.5px at 67% 72%, rgba(255,255,255,.75), transparent),
+      radial-gradient(2px 2px at 82% 24%, rgba(255,233,168,.8), transparent),
+      radial-gradient(1.5px 1.5px at 92% 58%, rgba(255,199,230,.8), transparent),
+      radial-gradient(1.5px 1.5px at 38% 86%, rgba(255,255,255,.7), transparent);
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 26px 16px 60px; position: relative; z-index: 1; }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 34px; margin: 0 0 4px; letter-spacing: 1px; font-weight: 700;
+    color: #fff4fb;
+    text-shadow: 0 0 22px rgba(255,199,230,.5), 0 2px 10px rgba(42,26,62,.6);
+  }
+  h1 .em { color: var(--amber); text-shadow: 0 0 18px rgba(246,211,101,.6); }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 18px; font-style: italic; letter-spacing: .3px; }
+
+  /* ---- HUD: ป้ายกำมะหยี่ขอบเงิน ---- */
+  .hud { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .chip {
+    background: linear-gradient(180deg, rgba(92,61,130,.85), rgba(58,36,86,.9));
+    border: 1px solid var(--stone-edge);
+    border-top-color: #c7a9e6;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 14px rgba(26,12,40,.45);
+    border-radius: 16px; padding: 8px 16px; font-size: 14px; min-width: 96px;
+    backdrop-filter: blur(2px);
+  }
+  .chip b {
+    color: var(--amber); font-size: 21px; display: block; font-family: 'Playfair Display', Georgia, serif;
+    text-shadow: 0 0 12px rgba(246,211,101,.45);
+  }
+  .chip span { color: var(--rune-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ---- การ์ด = แผงกำมะหยี่ขอบทอง ---- */
+  .card {
+    background: linear-gradient(180deg, rgba(58,36,86,.92), rgba(42,24,62,.95));
+    border: 1px solid var(--stone-edge);
+    border-radius: 22px; padding: 22px 22px 24px; margin-bottom: 18px; position: relative;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 12px 36px rgba(20,10,34,.5);
+  }
+  /* ลายม่านทองโค้ง 2 มุมบน */
+  .card::before, .card::after {
+    content: "❦"; position: absolute; top: 12px; pointer-events: none;
+    color: var(--rune-dim); font-size: 16px; opacity: .55;
+  }
+  .card::before { left: 16px; }
+  .card::after  { right: 16px; transform: scaleX(-1); }
+  .card h2 {
+    margin: 0 0 10px; font-size: 21px; font-family: 'Playfair Display', Georgia, serif;
+    color: #ffeefb; letter-spacing: .5px; font-weight: 700;
+  }
+  .card p.lead { color: var(--muted); font-size: 14px; margin: 0 0 14px; line-height: 1.65; }
+  .card b { color: var(--candle); font-weight: 600; }
+
+  /* ============================================================
+     BALLROOM FLOOR / GLASS SLIPPERS
+     ============================================================ */
+  .arena {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 7px; height: 250px; padding: 14px 12px;
+    border-radius: 18px; overflow: hidden; position: relative;
+    /* ฟลอร์เต้นรำสะท้อนแสง: ม่วงลึก + ลำแสงโคมระย้าจากด้านบน */
+    background:
+      radial-gradient(440px 180px at 50% -12%, rgba(255,233,168,.2), transparent 70%),
+      radial-gradient(420px 170px at 50% 118%, rgba(255,199,230,.16), transparent 72%),
+      linear-gradient(180deg, #2e1a46, #1d1030);
+    border: 1px solid rgba(138,106,181,.5);
+    box-shadow: inset 0 0 50px rgba(12,6,24,.65), inset 0 2px 0 rgba(255,255,255,.06);
+  }
+  /* เส้นสะท้อนพื้นกระเบื้องเงา ๆ */
+  .arena::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .25;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 56px);
+  }
+  /* ลิปสติก: หัวลิปเฉียงมนด้านบน (เนื้อสี) + ปลอกด้านล่าง
+     หัวเฉียงอิงขอบบน ฐานอิงขอบล่าง จึงไม่บิดเบี้ยวเวลา bar สูง-เตี้ย */
+  .bar {
+    width: 40px;
+    clip-path: polygon(
+      0% 16%,     /* ไหล่ซ้ายของหัวลิป */
+      30% 2%,     /* ยอดหัวลิปเฉียงขึ้นไปทางขวา */
+      70% 0%,
+      100% 10%,   /* ไหล่ขวาสูงกว่า = หัวตัดเฉียง */
+      100% 100%,  /* มุมล่างขวา (ฐานปลอก) */
+      0% 100%     /* มุมล่างซ้าย */
+    );
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bar) 65%, #fff 20%), var(--bar) 55%, color-mix(in srgb, var(--bar) 80%, #000 14%));
+    display: flex; align-items: flex-end; justify-content: center;
+    color: #3a2456; font-weight: 700; font-size: 13px; font-family: Georgia, serif;
+    padding-bottom: 4px; position: relative;
+    transition: height .18s ease, background .18s ease, transform .18s ease, filter .18s ease;
+    cursor: pointer; user-select: none;
+    filter: drop-shadow(0 4px 5px rgba(16,8,30,.45));
+  }
+  /* ปลอกลิปสติกสีเงิน: แถบคาดช่วงล่างของแท่ง */
+  .bar::before {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 22%; height: 20%;
+    background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.15) 45%, rgba(0,0,0,.18));
+    border-top: 1px solid rgba(255,255,255,.4);
+    border-bottom: 1px solid rgba(0,0,0,.2);
+    pointer-events: none;
+  }
+  /* ประกายไฮไลต์บนเนื้อลิป (แถบแนวตั้งด้านซ้าย) */
+  .bar::after {
+    content: ""; position: absolute; top: 10%; left: 20%; width: 14%; height: 44%;
+    border-radius: 40%; background: rgba(255,255,255,.6); filter: blur(1.5px); pointer-events: none;
+  }
+  .bar.sorted  { background: linear-gradient(145deg, #d8fff2, #a7f0dd 40%, var(--bar-sorted)); filter: drop-shadow(0 0 12px rgba(118,224,194,.6)); }
+  .bar.compare { background: linear-gradient(145deg, #fff0f8, #ffd9ee 40%, var(--bar-compare)); filter: drop-shadow(0 0 14px rgba(255,199,230,.75)); color:#5a1e42; }
+  .bar.pivot   { background: linear-gradient(145deg, #ffe0ea, #ffabc3 40%, var(--bar-pivot)); filter: drop-shadow(0 0 14px rgba(255,143,171,.7)); color: #5a1030; }
+  .bar.active  { background: linear-gradient(145deg, #fff6d8, var(--candle) 40%, var(--amber)); transform: translateY(-7px); }
+  .bar.selected { outline: 2px solid var(--amber); outline-offset: 3px; filter: drop-shadow(0 0 16px rgba(246,211,101,.8)); transform: translateY(-5px); }
+
+  /* ============================================================
+     BUTTONS — ปุ่มกำมะหยี่ขอบเงิน
+     ============================================================ */
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  button {
+    background: linear-gradient(180deg, var(--stone-3), var(--stone-2));
+    color: var(--text); border: 1px solid var(--stone-edge);
+    border-radius: 999px; padding: 10px 18px; font-size: 14px; cursor: pointer;
+    font-family: inherit; letter-spacing: .3px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 8px rgba(20,10,34,.4);
+    transition: background .15s, transform .05s, box-shadow .15s, color .15s;
+  }
+  button:hover { background: linear-gradient(180deg, #6d4a97, var(--stone-3)); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 0 16px rgba(255,199,230,.35); }
+  button:active { transform: translateY(1px); }
+  /* ปุ่มมนตร์ (ชมพูม่วง) */
+  button.primary {
+    background: linear-gradient(180deg, #e884c0, #c05a9e); color: #fff;
+    border-color: #ffb8df; font-weight: 700; text-shadow: 0 0 8px rgba(255,199,230,.6);
+  }
+  button.primary:hover { background: linear-gradient(180deg, #f29ad0, #cf6bac); }
+  /* ปุ่มทองแชมเปญ */
+  button.warn {
+    background: linear-gradient(180deg, #f6d365, #d9b24a); color: #4a3406;
+    border-color: #ffe9a8; font-weight: 700;
+  }
+  button.warn:hover { background: linear-gradient(180deg, #ffe28a, #e6bf55); }
+  button:disabled { opacity: .42; cursor: not-allowed; filter: grayscale(.35); }
+
+  .algo-btns button { min-width: 110px; }
+  .tabbar { display: flex; gap: 8px; margin-bottom: 18px; }
+  .tabbar button { flex: 1; font-family: 'Playfair Display', Georgia, serif; letter-spacing: .5px; padding: 13px; }
+  .tabbar button.on {
+    background: linear-gradient(180deg, #e884c0, #bf579c); color: #fff;
+    border-color: #ffb8df; font-weight: 700; text-shadow: 0 0 10px rgba(255,199,230,.6);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 0 20px rgba(255,199,230,.4);
+  }
+
+  .msg { margin-top: 14px; font-size: 15px; min-height: 22px; line-height: 1.5; }
+  .msg.good { color: var(--good); text-shadow: 0 0 10px rgba(159,240,214,.35); }
+  .msg.bad { color: var(--bad); text-shadow: 0 0 10px rgba(255,143,171,.35); }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--muted); letter-spacing: .3px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 13px; height: 13px; border-radius: 4px; display: inline-block; box-shadow: 0 0 6px rgba(16,8,30,.4); }
+
+  /* กล่องคำใบ้ = ม้วนจดหมายเชิญงานเต้นรำ */
+  .hint {
+    background: linear-gradient(180deg, rgba(232,132,192,.16), rgba(58,36,86,.55));
+    border: 1px solid var(--stone-edge); border-left: 3px solid var(--rune);
+    padding: 12px 15px; border-radius: 14px; font-size: 13px; color: var(--muted);
+    margin-top: 14px; line-height: 1.65;
+  }
+  .hint b { color: var(--candle); }
+  .hidden { display: none !important; }
+  footer { color: var(--rune-dim); font-size: 12px; text-align: center; margin-top: 28px; font-style: italic; letter-spacing: .5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💄 PRINCESS VANITY <span class="em">✨</span></h1>
+  <div class="sub">เจ้าหญิงเรียงลิปสติก · จัดเครื่องแต่งหน้าให้เรียงงามก่อนเที่ยงคืนจะมาถึง — ด้วยศาสตร์แห่งการจัดเรียง</div>
+
+  <div class="hud">
+    <div class="chip"><b id="hudScore">0</b><span>คะแนนรวม</span></div>
+    <div class="chip"><b id="hudLevel">1</b><span>ค่ำคืน</span></div>
+    <div class="chip"><b id="hudLives">3</b><span>มนตร์นางฟ้า</span></div>
+    <div class="chip"><b id="hudBest">0</b><span>คะแนนสูงสุด</span></div>
+  </div>
+
+  <div class="tabbar">
+    <button id="tabManual" class="on">💄 ฉาก 1: จัดลิปสติกให้เรียง</button>
+    <button id="tabRace">💃 ฉาก 2: เรียงให้ไวที่สุด</button>
+  </div>
+
+  <!-- ============================================================
+       MODE 1: MANUAL SORT (player performs adjacent swaps)
+       ============================================================ -->
+  <section id="modeManual" class="card">
+    <h2>💄 ฉากจัดลิปสติกให้เรียง (Inversion Challenge)</h2>
+    <p class="lead">
+      ลิปสติกบนโต๊ะเครื่องแป้งวางสลับที่กันก่อนงานเต้นรำ! แตะลิปสติก 2 แท่งที่ <b>อยู่ติดกัน</b>
+      เพื่อสลับตำแหน่ง เรียงจาก <b>เล็กไปใหญ่</b> ให้ครบภายในจำนวนครั้งที่กำหนด
+      แล้วเจ้าหญิงจะแต่งตัวเสร็จทันออกงานอย่างงดงาม
+    </p>
+
+    <div class="arena" id="arenaManual"></div>
+
+    <div class="legend">
+      <span><i style="background:var(--bar)"></i> ลิปสติก</span>
+      <span><i style="background:var(--amber)"></i> เลือกไว้</span>
+      <span><i style="background:var(--bar-sorted)"></i> เข้าที่แล้ว</span>
+    </div>
+
+    <div class="row">
+      <div class="chip"><b id="swapsLeft">0</b><span>สลับได้อีก</span></div>
+      <div class="chip"><b id="minSwaps">0</b><span>สลับน้อยสุด (inversions)</span></div>
+      <button id="btnManualHint">💡 ใบ้: คู่ไหนผิดที่</button>
+      <button id="btnManualNew" class="warn">🔄 ค่ำคืนใหม่</button>
+    </div>
+    <div class="msg" id="msgManual">แตะลิปสติกที่อยู่ติดกันสองแท่งเพื่อสลับ</div>
+
+    <div class="hint">
+      <b>ทำไมถึงเกี่ยวกับ Sorting?</b> การสลับเฉพาะคู่ที่อยู่ติดกันคือหัวใจของ
+      <b>Bubble Sort</b> จำนวนสลับน้อยที่สุดที่ทำให้เรียงได้ = จำนวน <b>inversions</b>
+      (คู่ที่สลับที่กันอยู่) พอดีเป๊ะ เกมคำนวณค่านี้ให้คุณเทียบว่าคุณเล่นได้ดีแค่ไหน
+    </div>
+  </section>
+
+  <!-- ============================================================
+       MODE 2: ALGORITHM RACE (player picks the best algorithm)
+       ============================================================ -->
+  <section id="modeRace" class="card hidden">
+    <h2>💃 ฉากหาวิธีเรียงที่ไวที่สุด (Algorithm)</h2>
+    <p class="lead">
+      หา<b>วิธีเรียงลิปสติก (algorithm) ที่ไวที่สุด</b>ก่อนไปงานเต้นรำไม่ทัน!
+      ยิ่งเลือกเข้ากับลักษณะข้อมูล ยิ่งได้โบนัสเยอะ
+      (วัดจากจำนวน "จังหวะ" ที่ใช้ ยิ่งน้อยยิ่งดี)
+    </p>
+
+    <div class="arena" id="arenaRace"></div>
+
+    <div class="legend">
+      <span><i style="background:var(--bar)"></i> ลิปสติก</span>
+      <span><i style="background:var(--bar-compare)"></i> กำลังเทียบคู่</span>
+      <span><i style="background:var(--bar-pivot)"></i> คู่นำ (pivot)</span>
+      <span><i style="background:var(--bar-sorted)"></i> เข้าที่แล้ว</span>
+    </div>
+
+    <div class="row" id="dataPattern"></div>
+
+    <div class="row algo-btns">
+      <button data-algo="bubble">🫧 Bubble</button>
+      <button data-algo="selection">🎯 Selection</button>
+      <button data-algo="insertion">💍 Insertion</button>
+      <button data-algo="quick">⚡ Quick</button>
+      <button data-algo="merge">🎀 Merge</button>
+    </div>
+
+    <div class="row">
+      <button id="btnRaceNew" class="warn">🔄 ข้อมูลชุดใหม่</button>
+      <span id="raceOps" class="chip hidden"><b>0</b><span>จังหวะ (operations)</span></span>
+    </div>
+    <div class="msg" id="msgRace">เลือกวิธีเรียงที่คิดว่าไวที่สุดกับลิปสติกชุดนี้</div>
+
+    <div class="hint" id="raceHint">
+      <b>เคล็ดลับ:</b> ข้อมูล <b>เกือบเรียงแล้ว</b> → Bubble หรือ Insertion เร็วมาก ·
+      ข้อมูล <b>สุ่ม/ใหญ่/กลับหลัง</b> → Quick หรือ Merge · อยาก <b>สลับให้น้อยที่สุด</b> → Selection
+    </div>
+  </section>
+
+  <footer>
+    ✨ Princess Vanity ✨ · ก่อนระฆังเที่ยงคืนจะดัง จงเรียงลิปสติกให้งามด้วยศาสตร์แห่งการจัดเรียง
+  </footer>
+</div>
+
+<script>
+/* ================================================================
+   SORT KEEPER — single-file sorting game
+   ----------------------------------------------------------------
+   โครงสร้าง:
+     1) SORTING ALGORITHMS (instrumented) — คืนลำดับ "steps" เพื่อ
+        เอามาเล่น animation และนับ operations จริง ๆ
+     2) ANALYSIS HELPERS — เช่นนับ inversions, ตรวจว่าเรียงหรือยัง
+     3) MODE 1 (Manual) — ผู้เล่นสลับ adjacent ด้วยตัวเอง = Bubble Sort
+     4) MODE 2 (Race) — ผู้เล่นเลือก algorithm ที่เหมาะกับข้อมูล
+     5) GAME STATE + UI wiring
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   SECTION 1: SORTING ALGORITHMS (instrumented versions)
+   ----------------------------------------------------------------
+   แต่ละฟังก์ชันทำงานบนสำเนาของ array และบันทึก "step" ทุกครั้งที่
+   เปรียบเทียบ (compare) หรือสลับ/เขียนค่า (swap/overwrite) เพื่อ:
+     - เอาไปเล่น animation ให้ผู้เล่นเห็นการทำงานของ algorithm
+     - นับจำนวน operations จริง เพื่อให้คะแนนโหมด Race
+   step รูปแบบ: { type, indices:[...], array:[snapshot], note }
+   ---------------------------------------------------------------- */
+
+/* นับ 1 operation = 1 compare หรือ 1 write — ใช้วัดประสิทธิภาพ */
+function makeRecorder() {
+  const steps = [];
+  let ops = 0;
+  return {
+    steps,
+    get ops() { return ops; },
+    // บันทึกการ "เปรียบเทียบ" ค่าสองตำแหน่ง
+    compare(arr, i, j, note) {
+      ops++;
+      steps.push({ type: 'compare', indices: [i, j], array: arr.slice(), note });
+    },
+    // บันทึกการ "สลับ" ค่าสองตำแหน่ง (นับเป็น write 1 ครั้ง)
+    swap(arr, i, j, note) {
+      ops++;
+      steps.push({ type: 'swap', indices: [i, j], array: arr.slice(), note });
+    },
+    // บันทึกการ "เขียนทับ" ค่าหนึ่งตำแหน่ง (ใช้กับ insertion/merge)
+    write(arr, i, note) {
+      ops++;
+      steps.push({ type: 'write', indices: [i], array: arr.slice(), note });
+    },
+    // ทำเครื่องหมายว่าตำแหน่งเหล่านี้ "เรียงเข้าที่แล้ว"
+    markSorted(arr, idxs) {
+      steps.push({ type: 'sorted', indices: idxs.slice(), array: arr.slice() });
+    }
+  };
+}
+
+/* --- BUBBLE SORT ---
+   เปรียบเทียบคู่ที่อยู่ติดกัน แล้วสลับถ้าซ้ายมากกว่าขวา
+   ทำซ้ำจนไม่มีการสลับอีก (ค่าที่ใหญ่จะ "ลอย" ไปทางขวาเรื่อย ๆ)
+   ดีมากกับข้อมูลที่เกือบเรียงแล้ว (จะหยุดเร็วเพราะ early-exit) */
+function bubbleSort(input) {
+  const a = input.slice();
+  const r = makeRecorder();
+  const n = a.length;
+  for (let i = 0; i < n - 1; i++) {
+    let swapped = false;
+    for (let j = 0; j < n - 1 - i; j++) {
+      r.compare(a, j, j + 1);           // เทียบคู่ติดกัน
+      if (a[j] > a[j + 1]) {
+        [a[j], a[j + 1]] = [a[j + 1], a[j]];  // สลับ
+        r.swap(a, j, j + 1);
+        swapped = true;
+      }
+    }
+    r.markSorted(a, [n - 1 - i]);       // ตัวขวาสุดของรอบนี้เข้าที่แล้ว
+    if (!swapped) break;                // ไม่มีการสลับ = เรียงเสร็จแล้ว
+  }
+  r.markSorted(a, a.map((_, k) => k));
+  return r;
+}
+
+/* --- SELECTION SORT ---
+   หา "ค่าน้อยที่สุด" ในส่วนที่ยังไม่เรียง แล้วสลับมาไว้หน้าสุด
+   จุดเด่น: จำนวน "สลับ" น้อยมาก (มากสุด n-1 ครั้ง)
+   เหมาะเมื่อการเขียน/สลับมีราคาแพง */
+function selectionSort(input) {
+  const a = input.slice();
+  const r = makeRecorder();
+  const n = a.length;
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    for (let j = i + 1; j < n; j++) {
+      r.compare(a, minIdx, j);          // หาตัวน้อยสุด
+      if (a[j] < a[minIdx]) minIdx = j;
+    }
+    if (minIdx !== i) {
+      [a[i], a[minIdx]] = [a[minIdx], a[i]];  // สลับมาไว้ตำแหน่ง i
+      r.swap(a, i, minIdx);
+    }
+    r.markSorted(a, [i]);
+  }
+  r.markSorted(a, a.map((_, k) => k));
+  return r;
+}
+
+/* --- INSERTION SORT ---
+   เหมือนจัดไพ่บนมือ: หยิบตัวถัดไปมา "แทรก" ลงในตำแหน่งที่ถูกต้อง
+   ของส่วนที่เรียงแล้วทางซ้าย
+   เร็วมากกับข้อมูลที่ "เกือบเรียงแล้ว" (เกือบ O(n)) */
+function insertionSort(input) {
+  const a = input.slice();
+  const r = makeRecorder();
+  const n = a.length;
+  for (let i = 1; i < n; i++) {
+    const key = a[i];
+    let j = i - 1;
+    // เลื่อนตัวที่มากกว่า key ไปทางขวาเพื่อเปิดช่องให้ key
+    while (j >= 0) {
+      r.compare(a, j, j + 1);
+      if (a[j] > key) {
+        a[j + 1] = a[j];
+        r.write(a, j + 1);
+        j--;
+      } else break;
+    }
+    a[j + 1] = key;
+    r.write(a, j + 1);
+  }
+  r.markSorted(a, a.map((_, k) => k));
+  return r;
+}
+
+/* --- QUICK SORT (Lomuto partition) ---
+   เลือก pivot แล้วแบ่งข้อมูลเป็นสองฝั่ง (น้อยกว่า / มากกว่า pivot)
+   จากนั้นเรียงแต่ละฝั่งซ้ำแบบ recursive
+   เร็วเฉลี่ย O(n log n) เหมาะกับข้อมูลสุ่มขนาดใหญ่ */
+function quickSort(input) {
+  const a = input.slice();
+  const r = makeRecorder();
+
+  function partition(lo, hi) {
+    const pivot = a[hi];                // ใช้ตัวขวาสุดเป็น pivot
+    let i = lo - 1;
+    for (let j = lo; j < hi; j++) {
+      r.compare(a, j, hi);              // เทียบกับ pivot
+      if (a[j] < pivot) {
+        i++;
+        [a[i], a[j]] = [a[j], a[i]];
+        r.swap(a, i, j);
+      }
+    }
+    [a[i + 1], a[hi]] = [a[hi], a[i + 1]];  // วาง pivot ไว้ตรงกลาง
+    r.swap(a, i + 1, hi);
+    return i + 1;
+  }
+  function qs(lo, hi) {
+    if (lo < hi) {
+      const p = partition(lo, hi);
+      r.markSorted(a, [p]);            // pivot เข้าที่ถาวรแล้ว
+      qs(lo, p - 1);
+      qs(p + 1, hi);
+    } else if (lo === hi) {
+      r.markSorted(a, [lo]);
+    }
+  }
+  qs(0, a.length - 1);
+  r.markSorted(a, a.map((_, k) => k));
+  return r;
+}
+
+/* --- MERGE SORT ---
+   แบ่งครึ่งไปเรื่อย ๆ จนเหลือชิ้นละ 1 ตัว แล้ว "รวม" (merge)
+   สองชิ้นที่เรียงแล้วเข้าด้วยกันเป็นชิ้นที่ใหญ่ขึ้น
+   เสถียร (stable) และเป็น O(n log n) เสมอ ไม่ว่าข้อมูลเป็นแบบไหน */
+function mergeSort(input) {
+  const a = input.slice();
+  const r = makeRecorder();
+
+  function merge(lo, mid, hi) {
+    const left = a.slice(lo, mid + 1);
+    const right = a.slice(mid + 1, hi + 1);
+    let i = 0, j = 0, k = lo;
+    while (i < left.length && j < right.length) {
+      r.compare(a, lo + i, mid + 1 + j);   // เทียบหัวของสองฝั่ง
+      if (left[i] <= right[j]) {
+        a[k] = left[i++];
+      } else {
+        a[k] = right[j++];
+      }
+      r.write(a, k);                        // เขียนค่าที่น้อยกว่าลงตำแหน่ง k
+      k++;
+    }
+    while (i < left.length) { a[k] = left[i++]; r.write(a, k); k++; }
+    while (j < right.length) { a[k] = right[j++]; r.write(a, k); k++; }
+  }
+  function ms(lo, hi) {
+    if (lo >= hi) return;
+    const mid = Math.floor((lo + hi) / 2);
+    ms(lo, mid);
+    ms(mid + 1, hi);
+    merge(lo, mid, hi);
+  }
+  ms(0, a.length - 1);
+  r.markSorted(a, a.map((_, k) => k));
+  return r;
+}
+
+const ALGORITHMS = {
+  bubble: { fn: bubbleSort, name: 'Bubble Sort' },
+  selection: { fn: selectionSort, name: 'Selection Sort' },
+  insertion: { fn: insertionSort, name: 'Insertion Sort' },
+  quick: { fn: quickSort, name: 'Quick Sort' },
+  merge: { fn: mergeSort, name: 'Merge Sort' },
+};
+
+/* ----------------------------------------------------------------
+   SECTION 2: ANALYSIS HELPERS
+   ---------------------------------------------------------------- */
+
+/* นับ inversions = จำนวนคู่ (i<j) ที่ a[i] > a[j]
+   ค่านี้คือ "จำนวนครั้งน้อยที่สุด" ของการสลับ adjacent ที่ทำให้
+   array เรียงจากน้อยไปมากได้ — เป็นหัวใจของโหมด Manual */
+function countInversions(arr) {
+  let inv = 0;
+  for (let i = 0; i < arr.length; i++)
+    for (let j = i + 1; j < arr.length; j++)
+      if (arr[i] > arr[j]) inv++;
+  return inv;
+}
+
+/* ตรวจว่าเรียงจากน้อยไปมากครบหรือยัง */
+function isSorted(arr) {
+  for (let i = 0; i < arr.length - 1; i++)
+    if (arr[i] > arr[i + 1]) return false;
+  return true;
+}
+
+/* สุ่ม array ตามรูปแบบที่กำหนด เพื่อให้โหมด Race มี "ลักษณะข้อมูล"
+   ที่ชัดเจน (ซึ่งจะชี้ว่า algorithm ไหนเหมาะ) */
+function makeArray(pattern, n) {
+  let a = Array.from({ length: n }, (_, i) => i + 1);
+  if (pattern === 'random') {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+  } else if (pattern === 'nearly') {
+    // เกือบเรียงแล้ว: สลับแค่ไม่กี่คู่
+    const swaps = Math.max(1, Math.floor(n / 5));
+    for (let s = 0; s < swaps; s++) {
+      const i = Math.floor(Math.random() * (n - 1));
+      [a[i], a[i + 1]] = [a[i + 1], a[i]];
+    }
+  } else if (pattern === 'reversed') {
+    a.reverse();                 // แย่ที่สุดสำหรับ bubble/insertion
+  } else if (pattern === 'fewUnique') {
+    a = a.map(() => 1 + Math.floor(Math.random() * 3)); // ค่าซ้ำเยอะ
+  }
+  return a;
+}
+
+/* ----------------------------------------------------------------
+   SECTION 3: GAME STATE + SHARED UI
+   ---------------------------------------------------------------- */
+const state = {
+  score: 0,
+  level: 1,
+  lives: 3,
+  best: Number(localStorage.getItem('sortKeeperBest') || 0),
+};
+
+const $ = (id) => document.getElementById(id);
+function refreshHud() {
+  $('hudScore').textContent = state.score;
+  $('hudLevel').textContent = state.level;
+  $('hudLives').textContent = state.lives;
+  $('hudBest').textContent = state.best;
+}
+function addScore(pts) {
+  state.score = Math.max(0, state.score + pts);
+  if (state.score > state.best) {
+    state.best = state.score;
+    localStorage.setItem('sortKeeperBest', state.best);
+  }
+  refreshHud();
+}
+
+/* วาด bar ลงใน arena ที่กำหนด */
+function renderBars(container, arr, opts = {}) {
+  const maxVal = Math.max(...arr, 1);
+  container.innerHTML = '';
+  const w = Math.max(14, Math.min(42, Math.floor(820 / arr.length)));
+  arr.forEach((v, idx) => {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = (30 + (v / maxVal) * 180) + 'px';
+    bar.style.width = w + 'px';
+    bar.style.fontSize = (w < 24 ? 11 : 14) + 'px';
+    bar.textContent = v;
+    bar.dataset.idx = idx;
+    if (opts.sorted && opts.sorted.has(idx)) bar.classList.add('sorted');
+    if (opts.compare && opts.compare.includes(idx)) bar.classList.add('compare');
+    if (opts.pivot && opts.pivot.includes(idx)) bar.classList.add('pivot');
+    if (opts.selected === idx) bar.classList.add('selected');
+    if (opts.onClick) bar.addEventListener('click', () => opts.onClick(idx));
+    container.appendChild(bar);
+  });
+}
+
+/* ----------------------------------------------------------------
+   SECTION 4: MODE 1 — MANUAL SORT (the player IS the sorter)
+   ----------------------------------------------------------------
+   ผู้เล่นสลับเฉพาะคริสตัลที่อยู่ "ติดกัน" ซึ่งก็คือการเล่นเป็น
+   Bubble Sort ด้วยมือ จำนวนสลับที่ดีที่สุด = inversions ของ array
+   ---------------------------------------------------------------- */
+const manual = {
+  arr: [],
+  selected: null,
+  swapsUsed: 0,
+  budget: 0,
+  minSwaps: 0,
+  done: false,
+};
+
+function manualSortedSet() {
+  // ตำแหน่งที่ค่าตรงกับค่าที่ควรอยู่ (คือ "เข้าที่แล้ว")
+  const sortedCopy = manual.arr.slice().sort((a, b) => a - b);
+  const set = new Set();
+  manual.arr.forEach((v, i) => { if (v === sortedCopy[i]) set.add(i); });
+  return set;
+}
+
+function newManualRound() {
+  const n = Math.min(5 + state.level, 9);           // ด่านยิ่งสูง bar ยิ่งเยอะ
+  manual.arr = makeArray('random', n);
+  // กันกรณีสุ่มได้เรียงอยู่แล้ว
+  while (isSorted(manual.arr)) manual.arr = makeArray('random', n);
+  manual.minSwaps = countInversions(manual.arr);     // สลับน้อยสุดที่เป็นไปได้
+  manual.budget = manual.minSwaps + 2;               // ให้เผื่ออีก 2 ครั้ง
+  manual.swapsUsed = 0;
+  manual.selected = null;
+  manual.done = false;
+  $('minSwaps').textContent = manual.minSwaps;
+  $('swapsLeft').textContent = manual.budget;
+  $('msgManual').className = 'msg';
+  $('msgManual').textContent = 'แตะลิปสติกที่อยู่ติดกันสองแท่งเพื่อสลับ';
+  drawManual();
+}
+
+function drawManual() {
+  renderBars($('arenaManual'), manual.arr, {
+    sorted: manual.done ? new Set(manual.arr.map((_, i) => i)) : manualSortedSet(),
+    selected: manual.selected,
+    onClick: onManualClick,
+  });
+}
+
+function onManualClick(idx) {
+  if (manual.done) return;
+  if (manual.selected === null) {
+    manual.selected = idx;                 // เลือกตัวแรก
+    drawManual();
+    return;
+  }
+  if (manual.selected === idx) {           // คลิกตัวเดิม = ยกเลิก
+    manual.selected = null;
+    drawManual();
+    return;
+  }
+  // ต้องเป็นตัวที่อยู่ "ติดกัน" เท่านั้น (กติกาแบบ bubble sort)
+  if (Math.abs(manual.selected - idx) !== 1) {
+    $('msgManual').className = 'msg bad';
+    $('msgManual').textContent = 'สลับได้เฉพาะลิปสติกที่อยู่ติดกันเท่านั้น!';
+    manual.selected = idx;
+    drawManual();
+    return;
+  }
+  // ทำการสลับ
+  const i = manual.selected, j = idx;
+  [manual.arr[i], manual.arr[j]] = [manual.arr[j], manual.arr[i]];
+  manual.swapsUsed++;
+  manual.selected = null;
+  $('swapsLeft').textContent = manual.budget - manual.swapsUsed;
+  drawManual();
+  checkManualEnd();
+}
+
+function checkManualEnd() {
+  if (isSorted(manual.arr)) {
+    manual.done = true;
+    // คะแนน: ยิ่งใกล้ค่า optimal (inversions) ยิ่งได้มาก
+    const efficiency = manual.swapsUsed === manual.minSwaps;
+    const base = 100 + state.level * 20;
+    const bonus = efficiency ? 50 : 0;
+    addScore(base + bonus);
+    state.level++;
+    refreshHud();
+    $('msgManual').className = 'msg good';
+    $('msgManual').textContent = efficiency
+      ? `👑 เพอร์เฟกต์! ใช้ ${manual.swapsUsed} ครั้ง = optimal พอดี! +${base + bonus} คะแนน เจ้าหญิงก้าวสู่ฟลอร์อย่างงดงาม!`
+      : `✅ สำเร็จ! ใช้ ${manual.swapsUsed} ครั้ง (ดีที่สุดคือ ${manual.minSwaps}) +${base} คะแนน`;
+    drawManual();
+    setTimeout(newManualRound, 2200);
+    return;
+  }
+  if (manual.swapsUsed >= manual.budget) {
+    // หมดโควตาสลับ แต่ยังไม่เรียง = หอคอยโดนตี
+    manual.done = true;
+    state.lives--;
+    refreshHud();
+    $('msgManual').className = 'msg bad';
+    if (state.lives <= 0) {
+      $('msgManual').textContent = '🕛 ระฆังเที่ยงคืนดังแล้ว! มนตร์สลาย เกมจบ กด "ค่ำคืนใหม่" เพื่อเริ่มใหม่';
+      state.lives = 0; state.level = 1; state.score = 0; refreshHud();
+    } else {
+      $('msgManual').textContent = `🕛 สลับหมดแต่ยังไม่เรียง! มนตร์นางฟ้าจางลง (เหลือ ${state.lives})`;
+      setTimeout(newManualRound, 2000);
+    }
+  }
+}
+
+/* ปุ่มใบ้: ไฮไลต์คู่ติดกันคู่แรกที่ยังสลับที่กันอยู่ (inversion) */
+function manualHint() {
+  if (manual.done) return;
+  for (let i = 0; i < manual.arr.length - 1; i++) {
+    if (manual.arr[i] > manual.arr[i + 1]) {
+      manual.selected = i;
+      drawManual();
+      $('msgManual').className = 'msg';
+      $('msgManual').textContent = `💡 คู่ที่ ${i + 1} กับ ${i + 2} สลับที่กันอยู่ ลองสลับดู`;
+      return;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------
+   SECTION 5: MODE 2 — ALGORITHM RACE (pick the right algorithm)
+   ----------------------------------------------------------------
+   สุ่ม "ลักษณะข้อมูล" (เกือบเรียง / กลับหัว / สุ่ม / ค่าซ้ำเยอะ)
+   ผู้เล่นเลือก algorithm → เรารัน instrumented version จริง ๆ
+   แล้วเล่น animation + ให้คะแนนตามจำนวน operations ที่ใช้
+   (น้อย = เลือกเหมาะกับข้อมูล = คะแนนเยอะ)
+   ---------------------------------------------------------------- */
+const race = {
+  arr: [],
+  pattern: '',
+  playing: false,
+  // algorithm ที่ "เหมาะที่สุด" ของแต่ละ pattern (สำหรับโบนัสและใบ้)
+  bestFor: {
+    nearly:   ['insertion', 'bubble'],
+    reversed: ['merge', 'quick'],
+    random:   ['quick', 'merge'],
+    fewUnique:['quick', 'merge'],
+  },
+  patternLabel: {
+    nearly: 'เกือบเรียงแล้ว',
+    reversed: 'เรียงกลับหลัง (ใหญ่→เล็ก)',
+    random: 'สลับที่กันหมด',
+    fewUnique: 'ขนาดซ้ำกันเยอะ',
+  },
+};
+
+function newRaceRound() {
+  const patterns = ['nearly', 'reversed', 'random', 'fewUnique'];
+  race.pattern = patterns[Math.floor(Math.random() * patterns.length)];
+  const n = Math.min(7 + state.level, 12);
+  race.arr = makeArray(race.pattern, n);
+  while (isSorted(race.arr)) race.arr = makeArray(race.pattern, n);
+  race.playing = false;
+  $('dataPattern').innerHTML =
+    `<div class="chip" style="min-width:auto"><b style="font-size:14px">${race.patternLabel[race.pattern]}</b>` +
+    `<span>ลักษณะลิปสติกชุดนี้</span></div>`;
+  $('raceOps').classList.add('hidden');
+  $('msgRace').className = 'msg';
+  $('msgRace').textContent = 'เลือกวิธีเรียงที่คิดว่าไวที่สุดกับลิปสติกชุดนี้';
+  setRaceButtons(true);
+  renderBars($('arenaRace'), race.arr, {});
+}
+
+function setRaceButtons(enabled) {
+  document.querySelectorAll('.algo-btns button').forEach(b => b.disabled = !enabled);
+  $('btnRaceNew').disabled = !enabled && race.playing;
+}
+
+/* เล่น animation ของ steps ที่ algorithm บันทึกไว้ */
+function playRace(algoKey) {
+  if (race.playing) return;
+  race.playing = true;
+  setRaceButtons(false);
+
+  const algo = ALGORITHMS[algoKey];
+  const recorder = algo.fn(race.arr);        // << รัน sorting จริง เก็บ steps + ops
+  const steps = recorder.steps;
+  const totalOps = recorder.ops;
+
+  $('msgRace').className = 'msg';
+  $('msgRace').textContent = `นางฟ้าแม่ทูนหัวกำลังร่าย ${algo.name}...`;
+
+  const sortedSet = new Set();
+  let k = 0;
+  const speed = Math.max(60, 420 - race.arr.length * 18);
+
+  const timer = setInterval(() => {
+    if (k >= steps.length) {
+      clearInterval(timer);
+      finishRace(algoKey, totalOps);
+      return;
+    }
+    const step = steps[k++];
+    const opts = { sorted: new Set(sortedSet) };
+    if (step.type === 'sorted') {
+      step.indices.forEach(i => sortedSet.add(i));
+    } else if (step.type === 'compare') {
+      opts.compare = step.indices;
+    } else if (step.type === 'swap' || step.type === 'write') {
+      opts.compare = step.indices;
+    }
+    renderBars($('arenaRace'), step.array, opts);
+  }, speed);
+}
+
+function finishRace(algoKey, totalOps) {
+  renderBars($('arenaRace'), race.arr.slice().sort((a, b) => a - b),
+    { sorted: new Set(race.arr.map((_, i) => i)) });
+
+  const best = race.bestFor[race.pattern];
+  const chosenIsBest = best.includes(algoKey);
+  $('raceOps').classList.remove('hidden');
+  $('raceOps').querySelector('b').textContent = totalOps;
+
+  // คะแนน: ฐานลดตามจำนวน ops (เลือก algorithm ที่ ops น้อย = ได้เยอะ)
+  const base = Math.max(10, 160 - totalOps);
+  const bonus = chosenIsBest ? 60 : 0;
+  const gained = base + bonus;
+  addScore(gained);
+
+  if (chosenIsBest) {
+    state.level++;
+    refreshHud();
+    $('msgRace').className = 'msg good';
+    $('msgRace').textContent =
+      `👑 เลือกวิธีได้ไวมาก! ${ALGORITHMS[algoKey].name} ใช้แค่ ${totalOps} จังหวะ · +${gained} คะแนน`;
+  } else {
+    $('msgRace').className = 'msg bad';
+    const suggest = best.map(k => ALGORITHMS[k].name).join(' หรือ ');
+    $('msgRace').textContent =
+      `ก็เรียงได้ แต่ ${ALGORITHMS[algoKey].name} ใช้ ${totalOps} จังหวะ · ลอง ${suggest} จะงามกว่า · +${gained} คะแนน`;
+  }
+  race.playing = false;
+  $('btnRaceNew').disabled = false;
+  setTimeout(() => { if (!race.playing) newRaceRound(); }, 2600);
+}
+
+/* ----------------------------------------------------------------
+   SECTION 6: WIRING (tabs, buttons, init)
+   ---------------------------------------------------------------- */
+$('tabManual').addEventListener('click', () => switchMode('manual'));
+$('tabRace').addEventListener('click', () => switchMode('race'));
+function switchMode(mode) {
+  const m = mode === 'manual';
+  $('tabManual').classList.toggle('on', m);
+  $('tabRace').classList.toggle('on', !m);
+  $('modeManual').classList.toggle('hidden', !m);
+  $('modeRace').classList.toggle('hidden', m);
+}
+
+$('btnManualNew').addEventListener('click', newManualRound);
+$('btnManualHint').addEventListener('click', manualHint);
+$('btnRaceNew').addEventListener('click', () => { if (!race.playing) newRaceRound(); });
+document.querySelectorAll('.algo-btns button').forEach(btn => {
+  btn.addEventListener('click', () => playRace(btn.dataset.algo));
+});
+
+// INIT
+refreshHud();
+newManualRound();
+newRaceRound();
+</script>
+</body>
+</html>
