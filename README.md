@@ -3,7 +3,7 @@
 > **เกมเว็บพัฒนาด้วย HTML, CSS และ JavaScript (Single File)**
 >
 > 🔗 **ลิงก์เล่นเกม (Live Demo):** https://hojpbar.github.io/Princess-Vanity/
-> 🎬 **ลิงก์วิดีโอสาธิต (YouTube):** [ใส่ลิงก์วิดีโอ YouTube ตรงนี้]
+> 🎬 **ลิงก์วิดีโอสาธิต (YouTube):** https://youtu.be/ySZYrARRmfU
 
 ---
 
